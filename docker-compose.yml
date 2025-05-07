@@ -1,0 +1,16 @@
+version: '3.9'
+
+services:
+  oracle:
+    image: gvenzl/oracle-free
+    container_name: oracle23c
+    ports:
+      - "1521:1521"
+    env_file:
+      - .env
+    environment:
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD}
+    volumes:
+      - ./backup:/opt/backup
+      - ./init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+      - ./data:/opt/oracle/oradata  # <-- Adicionado: volume persistente seguro
