@@ -2,9 +2,9 @@
 /data/backup/arquivo.dmp
 
 # Garantir que outros arquivos na pasta data não sejam ignorados
-!/data/
-!/data/backup/
+
 
 /data/backup/.env
 
 /.env
+/data

@@ -14,7 +14,7 @@ CONNECT sys/${ORACLE_PASSWORD}@localhost:1521/FREEPDB1 AS SYSDBA
 -- Criação do tablespace TS_STTINF01
 BEGIN
   EXECUTE IMMEDIATE q'[
-    CREATE TABLESPACE TS_STTINF01 DATAFILE 'ts_sttinf01.dbf' SIZE 500M AUTOEXTEND ON NEXT 10M MAXSIZE UNLIMITED
+    CREATE TABLESPACE TS_STTINF01 DATAFILE '/opt/oracle/oradata/FREE/ts_sttinf01.dbf' SIZE 500M AUTOEXTEND ON NEXT 10M MAXSIZE UNLIMITED
     EXTENT MANAGEMENT LOCAL
     SEGMENT SPACE MANAGEMENT AUTO
   ]';
@@ -63,7 +63,7 @@ EOF
 # Verifica se o dump existe antes de importar
 if [ -f "/opt/backup/arquivo.dmp" ]; then
   echo "📥 Iniciando importação do dump..."
-  impdp devuser/${ORACLE_PASSWORD}@FREEPDB1 \
+  impdp system/${ORACLE_PASSWORD}@FREEPDB1 \
     directory=BACKUP_DIR \
     dumpfile=arquivo.dmp \
     logfile=importacao.log \
