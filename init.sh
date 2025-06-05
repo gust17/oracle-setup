@@ -2,11 +2,30 @@
 set -e
 
 echo "⏳ Aguardando inicialização do Oracle..."
-until echo 'SELECT 1 FROM DUAL;' | sqlplus -S sys/${ORACLE_PASSWORD}@localhost:1521/FREEPDB1 AS SYSDBA | grep "1"; do
-  sleep 5
+# Aguarda até 5 minutos pelo Oracle estar pronto
+for i in {1..60}; do
+    if echo 'SELECT 1 FROM DUAL;' | sqlplus -S sys/${ORACLE_PASSWORD}@localhost:1521/FREEPDB1 AS SYSDBA | grep -q "1"; then
+        echo "✅ Oracle está pronto!"
+        break
+    fi
+    if [ $i -eq 60 ]; then
+        echo "❌ Timeout aguardando Oracle inicializar"
+        exit 1
+    fi
+    echo "⏳ Tentativa $i de 60..."
+    sleep 5
 done
 
 echo "✅ Oracle está pronto. Executando configurações iniciais..."
+
+# Verifica se o arquivo de dump existe
+if [ ! -f "/opt/backup/arquivo.dmp" ]; then
+    echo "❌ ERRO: Arquivo /opt/backup/arquivo.dmp não encontrado!"
+    echo "Por favor, coloque o arquivo arquivo.dmp na pasta backup/"
+    exit 1
+fi
+
+echo "📦 Criando tablespace e usuários..."
 
 sqlplus -S /nolog <<EOF
 CONNECT sys/${ORACLE_PASSWORD}@localhost:1521/FREEPDB1 AS SYSDBA
@@ -54,23 +73,28 @@ BEGIN
   EXECUTE IMMEDIATE q'[
     CREATE OR REPLACE DIRECTORY BACKUP_DIR AS '/opt/backup'
   ]';
+EXCEPTION WHEN OTHERS THEN
+  IF SQLCODE != -955 THEN RAISE; END IF;
 END;
 /
 
 EXIT;
 EOF
 
-# Verifica se o dump existe antes de importar
-if [ -f "/opt/backup/arquivo.dmp" ]; then
-  echo "📥 Iniciando importação do dump..."
-  impdp system/${ORACLE_PASSWORD}@FREEPDB1 \
+echo "📥 Iniciando importação do dump..."
+impdp system/${ORACLE_PASSWORD}@FREEPDB1 \
     directory=BACKUP_DIR \
     dumpfile=arquivo.dmp \
     logfile=importacao.log \
     remap_schema=CONNECTA:devuser \
     remap_tablespace=TS_STTINF01:TS_STTINF01 \
     full=y
-  echo "✅ Importação concluída."
+
+if [ $? -eq 0 ]; then
+    echo "✅ Importação concluída com sucesso!"
 else
-  echo "⚠️ Dump /opt/backup/arquivo.dmp não encontrado. Importação ignorada."
+    echo "❌ ERRO: Falha na importação do dump. Verifique o arquivo importacao.log"
+    exit 1
 fi
+
+echo "✨ Configuração finalizada com sucesso!"

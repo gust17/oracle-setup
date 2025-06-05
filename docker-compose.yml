@@ -4,6 +4,7 @@ services:
   oracle:
     image: gvenzl/oracle-free:latest
     container_name: oracle23c
+    platform: linux/amd64  # Força a plataforma para evitar problemas de compatibilidade no Windows
     ports:
       - "1521:1521"
     env_file:
@@ -13,9 +14,16 @@ services:
       - ORACLE_CHARACTERSET=AL32UTF8
       - ORACLE_NLS_CHARACTERSET=AL32UTF8
     volumes:
-      - ./backup:/opt/backup
-      - ./init.sh:/docker-entrypoint-initdb.d/init.sh:ro
-      - ./data:/opt/oracle/oradata  # <-- Adicionado: volume persistente seguro
+      - type: bind
+        source: ./backup
+        target: /opt/backup
+      - type: bind
+        source: ./init.sh
+        target: /docker-entrypoint-initdb.d/init.sh
+        read_only: true
+      - type: bind
+        source: ./data
+        target: /opt/oracle/oradata
     deploy:
       resources:
         limits:
