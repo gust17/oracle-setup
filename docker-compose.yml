@@ -45,3 +45,11 @@ services:
       timeout: 10s
       retries: 5
       start_period: 40s
+    command: >
+      bash -c "
+        /etc/init.d/oracle-xe-23c start &&
+        sleep 30 &&
+        chmod +x /docker-entrypoint-initdb.d/init.sh &&
+        /docker-entrypoint-initdb.d/init.sh &&
+        tail -f /opt/oracle/diag/rdbms/free/FREE/trace/alert_FREE.log
+      "
