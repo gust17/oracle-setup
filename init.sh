@@ -1,36 +1,36 @@
-#!/bin/bash
+﻿#!/bin/bash
 set -e
 
-echo "⏳ Aguardando inicialização do Oracle..."
-# Aguarda até 5 minutos pelo Oracle estar pronto
+echo "â³ Aguardando inicializaÃ§Ã£o do Oracle..."
+# Aguarda atÃ© 5 minutos pelo Oracle estar pronto
 for i in {1..60}; do
     if echo 'SELECT 1 FROM DUAL;' | sqlplus -S sys/${ORACLE_PASSWORD}@localhost:1521/FREEPDB1 AS SYSDBA | grep -q "1"; then
-        echo "✅ Oracle está pronto!"
+        echo "âœ… Oracle estÃ¡ pronto!"
         break
     fi
     if [ $i -eq 60 ]; then
-        echo "❌ Timeout aguardando Oracle inicializar"
+        echo "âŒ Timeout aguardando Oracle inicializar"
         exit 1
     fi
-    echo "⏳ Tentativa $i de 60..."
+    echo "â³ Tentativa $i de 60..."
     sleep 5
 done
 
-echo "✅ Oracle está pronto. Executando configurações iniciais..."
+echo "âœ… Oracle estÃ¡ pronto. Executando configuraÃ§Ãµes iniciais..."
 
 # Verifica se o arquivo de dump existe
 if [ ! -f "/opt/backup/arquivo.dmp" ]; then
-    echo "❌ ERRO: Arquivo /opt/backup/arquivo.dmp não encontrado!"
+    echo "âŒ ERRO: Arquivo /opt/backup/arquivo.dmp nÃ£o encontrado!"
     echo "Por favor, coloque o arquivo arquivo.dmp na pasta backup/"
     exit 1
 fi
 
-echo "📦 Criando tablespace e usuários..."
+echo "ðŸ“¦ Criando tablespace e usuÃ¡rios..."
 
 sqlplus -S /nolog <<EOF
 CONNECT sys/${ORACLE_PASSWORD}@localhost:1521/FREEPDB1 AS SYSDBA
 
--- Criação do tablespace TS_STTINF01
+-- CriaÃ§Ã£o do tablespace TS_STTINF01
 BEGIN
   EXECUTE IMMEDIATE q'[
     CREATE TABLESPACE TS_STTINF01 DATAFILE '/opt/oracle/oradata/FREE/ts_sttinf01.dbf' SIZE 500M AUTOEXTEND ON NEXT 10M MAXSIZE UNLIMITED
@@ -43,7 +43,7 @@ EXCEPTION
 END;
 /
 
--- Criação dos usuários
+-- CriaÃ§Ã£o dos usuÃ¡rios
 BEGIN
   EXECUTE IMMEDIATE 'CREATE USER devuser IDENTIFIED BY ${ORACLE_PASSWORD} DEFAULT TABLESPACE TS_STTINF01 QUOTA UNLIMITED ON TS_STTINF01';
   EXECUTE IMMEDIATE 'GRANT CONNECT, RESOURCE, DBA TO devuser';
@@ -68,7 +68,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 /
 
--- Criação do diretório lógico BACKUP_DIR
+-- CriaÃ§Ã£o do diretÃ³rio lÃ³gico BACKUP_DIR
 BEGIN
   EXECUTE IMMEDIATE q'[
     CREATE OR REPLACE DIRECTORY BACKUP_DIR AS '/opt/backup'
@@ -81,20 +81,20 @@ END;
 EXIT;
 EOF
 
-echo "📥 Iniciando importação do dump..."
+echo "ðŸ“¥ Iniciando importaÃ§Ã£o do dump..."
 impdp system/${ORACLE_PASSWORD}@FREEPDB1 \
     directory=BACKUP_DIR \
     dumpfile=arquivo.dmp \
     logfile=importacao.log \
-    remap_schema=CONNECTA:devuser \
+    remap_schema=OCIPROD1:DEVUSER \
     remap_tablespace=TS_STTINF01:TS_STTINF01 \
     full=y
 
 if [ $? -eq 0 ]; then
-    echo "✅ Importação concluída com sucesso!"
+    echo "âœ… ImportaÃ§Ã£o concluÃ­da com sucesso!"
 else
-    echo "❌ ERRO: Falha na importação do dump. Verifique o arquivo importacao.log"
+    echo "âŒ ERRO: Falha na importaÃ§Ã£o do dump. Verifique o arquivo importacao.log"
     exit 1
 fi
 
-echo "✨ Configuração finalizada com sucesso!"
+echo "âœ¨ ConfiguraÃ§Ã£o finalizada com sucesso!"
